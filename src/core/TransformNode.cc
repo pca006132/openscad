@@ -32,12 +32,22 @@
 #include "Parameters.h"
 #include "printutils.h"
 #include "degree_trig.h"
-#include <sstream>
+#include <double-conversion/double-conversion.h>
 #include <utility>
 #include <vector>
-#include <cassert>
 #include <boost/assign/std/vector.hpp>
 using namespace boost::assign; // bring 'operator+=()' into scope
+
+/* Define values for double-conversion library. */
+#define DC_BUFFER_SIZE (128)
+#define DC_FLAGS (double_conversion::DoubleToStringConverter::UNIQUE_ZERO)
+#define DC_INF NULL
+#define DC_NAN NULL
+#define DC_EXP 'e'
+#define DC_DECIMAL_LOW_EXP (-6)
+#define DC_DECIMAL_HIGH_EXP (21)
+#define DC_MAX_LEADING_ZEROES (5)
+#define DC_MAX_TRAILING_ZEROES (0)
 
 enum class transform_type_e {
   SCALE,
@@ -225,21 +235,27 @@ std::shared_ptr<AbstractNode> builtin_multmatrix(const ModuleInstantiation *inst
 
 std::string TransformNode::toString() const
 {
-  std::ostringstream stream;
+  double_conversion::DoubleToStringConverter dc(
+    DC_FLAGS, DC_INF, DC_NAN, DC_EXP,
+    DC_DECIMAL_LOW_EXP, DC_DECIMAL_HIGH_EXP, DC_MAX_LEADING_ZEROES, DC_MAX_TRAILING_ZEROES
+  );
 
-  stream << "multmatrix([";
+  char buffer[DC_BUFFER_SIZE];
+
+  double_conversion::StringBuilder builder(buffer, DC_BUFFER_SIZE);
+  builder.AddString("multmatrix([");
   for (int j = 0; j < 4; ++j) {
-    stream << "[";
+    builder.AddCharacter('[');
     for (int i = 0; i < 4; ++i) {
-      stream << this->matrix(j, i);
-      if (i != 3) stream << ", ";
+      dc.ToShortest(this->matrix(j, i), &builder);
+      if (i != 3) builder.AddString(", ");
     }
-    stream << "]";
-    if (j != 3) stream << ", ";
+    builder.AddCharacter(']');
+    if (j != 3) builder.AddString(", ");
   }
-  stream << "])";
+  builder.AddString("])");
 
-  return stream.str();
+  return builder.Finalize();
 }
 
 TransformNode::TransformNode(const ModuleInstantiation *mi, std::string verbose_name) :
