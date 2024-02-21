@@ -516,19 +516,18 @@ static SimplificationResult simplify_function_body(const Expression *expression,
         return Value::undefined.clone();
       } else {
         auto index = f->index();
-        if (index == 0) {
-          return std::get<const BuiltinFunction *>(*f)->evaluate(context, call);
-        } else if (index == 1) {
-          CallableUserFunction callable = std::get<CallableUserFunction>(*f);
-          function_body = callable.function->expr.get();
-          required_parameters = &callable.function->parameters;
-          defining_context = callable.defining_context;
+        if (auto builtin_fn = std::get_if<const BuiltinFunction*>(&*f)) {
+          return (*builtin_fn)->evaluate(context, call);
+        } else if (const auto callable = std::get_if<CallableUserFunction>(&*f)) {
+          function_body = callable->function->expr.get();
+          required_parameters = &callable->function->parameters;
+          defining_context = callable->defining_context;
         } else {
-          const FunctionType *function;
-          if (index == 2) {
-            function = &std::get<Value>(*f).toFunction();
-          } else if (index == 3) {
-            function = &std::get<const Value *>(*f)->toFunction();
+          const FunctionType *function = nullptr;
+          if (const auto value = std::get_if<Value>(&*f)) {
+            function = &value->toFunction();
+          } else if (const auto value_ptr = std::get_if<const Value*>(&*f)) {
+            function = &(*value_ptr)->toFunction();
           } else {
             assert(false);
           }
@@ -569,6 +568,7 @@ Value FunctionCall::evaluate(const std::shared_ptr<const Context>& context) cons
   const Expression *expression = this;
   while (true) {
     try {
+      // should add to context before attempt to simplify
       auto result = simplify_function_body(expression, *expression_context);
       if (Value *value = std::get_if<Value>(&result)) {
         return std::move(*value);
