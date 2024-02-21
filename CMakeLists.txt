@@ -861,7 +861,12 @@ if(EXPERIMENTAL AND ENABLE_TBB)
     -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_TBB
   )
   find_package(TBB REQUIRED)
-  target_link_libraries(OpenSCAD PRIVATE TBB::tbb)
+  if(TARGET TBB::tbb)
+    target_link_libraries(OpenSCAD PRIVATE TBB::tbb)
+  else()
+    target_include_directories(OpenSCAD PRIVATE $<BUILD_INTERFACE:${TBB_INCLUDE_DIRS}>)
+    target_link_libraries(OpenSCAD PRIVATE ${TBB_LINK_LIBRARIES})
+  endif()
 endif()
 
 if(EXPERIMENTAL)

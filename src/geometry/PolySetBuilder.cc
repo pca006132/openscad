@@ -38,7 +38,7 @@
 #endif
 
 PolySetBuilder::PolySetBuilder(int vertices_count, int indices_count, int dim, boost::tribool convex)
-  : convex_(convex), dim_(dim)
+  : dim_(dim), convex_(convex)
 {
   if (vertices_count != 0) vertices_.reserve(vertices_count);
   if (indices_count != 0) indices_.reserve(indices_count);
